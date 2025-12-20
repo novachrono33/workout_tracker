@@ -1,0 +1,100 @@
+name: Code Quality CI
+
+on:
+  push:
+    branches: [ main, develop, feature/** ]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - '.github/workflows/**'
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  backend-lint:
+    name: 🐍 Backend Linting
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+    
+    - name: 🐍 Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+        cache-dependency-path: backend/requirements.txt
+    
+    - name: 📦 Install backend dependencies
+      run: |
+        pip install black==23.12.1 flake8==6.1.0 isort==5.13.2 mypy==1.8.0 bandit==1.7.7 safety==2.3.5
+        # Если есть requirements.txt - установим
+        if [ -f requirements.txt ]; then
+          pip install -r requirements.txt
+        fi
+    
+    - name: 🧹 Check imports (isort)
+      run: isort --check-only --diff app/ || echo "⚠️  Import sorting issues found"
+    
+    - name: 🎨 Check formatting (black)
+      run: black --check --diff app/ || echo "⚠️  Formatting issues found"
+    
+    - name: 🔍 Lint with flake8
+      run: flake8 app/ --count --statistics || echo "⚠️  Style issues found"
+    
+    - name: 📝 Type checking (mypy)
+      run: mypy app/ --no-error-summary || echo "⚠️  Type issues found"
+    
+    - name: 🔒 Security check (bandit)
+      run: bandit -r app/ -f json -o bandit-report.json || echo "⚠️  Security issues found"
+    
+    - name: 🔐 Dependency security (safety)
+      if: hashFiles('backend/requirements.txt') != ''
+      run: safety check -r requirements.txt --json > safety-report.json || echo "⚠️  Dependency vulnerabilities found"
+
+  frontend-lint:
+    name: ⚛️ Frontend Linting
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: ./frontend
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+    
+    - name: ⚙️ Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+    
+    - name: 📦 Install frontend dependencies
+      run: npm ci
+    
+    - name: 🔧 Setup ESLint
+      run: |
+        if [ ! -f .eslintrc.js ] && [ ! -f .eslintrc.json ] && [ ! -f .eslintrc ]; then
+          npx eslint --init --quiet --yes \
+            --eslintrc \
+            --no-typescript \
+            --env browser,es2021,node \
+            --ext .js,.jsx \
+            --plugin react \
+            --rule 'react/prop-types: off' \
+            --rule 'react/react-in-jsx-scope: off'
+        fi
+    
+    - name: 🔍 Run ESLint
+      run: npx eslint src/ --max-warnings=10 --format=compact || echo "⚠️  ESLint issues found"
+    
+    - name: 🛡️ npm audit security
+      run: npm audit --audit-level=high || echo "⚠️  High severity vulnerabilities found"

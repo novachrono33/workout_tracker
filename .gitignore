@@ -1,0 +1,14 @@
+*.env
+__pycache__/
+venv/
+frontend/node_modules/
+.idea
+.vscode/settings.json
+.vscode/launch.json
+.DS_Store
+Thumbs.db
+backend_context.txt
+frontend_context.txt
+project_tree.txt
+save_*.sh
+show_structure.sh
