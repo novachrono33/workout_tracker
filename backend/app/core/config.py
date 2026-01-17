@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "password"
     POSTGRES_DB: str = "workout_tracker"
+    POSTGRES_PORT: int = 5432  # Добавь, если нет — для sync_database_url
     DATABASE_URL: Optional[str] = None
     
     # Security
@@ -29,7 +30,13 @@ class Settings(BaseSettings):
     # Redis
     REDIS_HOST: str = "redis"
     REDIS_PORT: int = 6379
-    
+
+    # ←←←← НОВОЕ СВОЙСТВО ←←←←
+    @property
+    def REDIS_URL(self) -> str:
+        """Формирует REDIS_URL из HOST и PORT для совместимости с кодом"""
+        return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}"
+
     class Config:
         case_sensitive = True
         env_file = ".env"
@@ -44,3 +51,4 @@ settings = Settings()
 
 logger.info(f"✅ Config загружен. Cloudflare Account ID: {settings.CLOUDFLARE_ACCOUNT_ID}")
 logger.info(f"✅ Cloudflare Model: {settings.CLOUDFLARE_MODEL}")
+logger.info(f"✅ Redis URL: {settings.REDIS_URL}")  # Добавь для отладки
